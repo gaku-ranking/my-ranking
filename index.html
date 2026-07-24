@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="BUMP作品カウンター" />
+  <title>BUMP作品カウンター</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    :root { --bg:#f4f6f8; --card:#fff; --ink:#111827; --muted:#667085; --line:#e5e7eb; --accent:#111827; --danger:#b42318; --ok:#067647; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Yu Gothic",sans-serif; }
+    .app { max-width:720px; margin:auto; padding:calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 28px); }
+    h1 { margin:0 0 6px; font-size:24px; letter-spacing:.01em; }
+    .lead { margin:0 0 16px; color:var(--muted); font-size:14px; line-height:1.6; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(16,24,40,.04); }
+    .upload { display:block; width:100%; padding:17px 14px; border-radius:14px; border:0; background:var(--accent); color:#fff; font-weight:700; font-size:16px; text-align:center; cursor:pointer; }
+    input[type=file] { display:none; }
+    .hint { margin:10px 0 0; color:var(--muted); font-size:12px; line-height:1.55; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .metric { border:1px solid var(--line); border-radius:12px; padding:10px 8px; text-align:center; }
+    .metric b { display:block; font-size:22px; }
+    .metric span { color:var(--muted); font-size:11px; }
+    button { touch-action:manipulation; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { flex:1 1 140px; min-height:46px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--ink); font-weight:700; font-size:14px; padding:10px 12px; }
+    .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .btn.danger { color:var(--danger); }
+    .btn:disabled { opacity:.45; }
+    .progressWrap { display:none; margin-top:14px; }
+    .progressTrack { height:10px; background:#eaecf0; border-radius:999px; overflow:hidden; }
+    .progressBar { height:100%; width:0; background:#344054; transition:width .2s; }
+    .status { margin-top:8px; color:var(--muted); font-size:13px; min-height:20px; }
+    .thumbs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .thumb { position:relative; aspect-ratio:9/16; background:#eee; border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+    .thumb img { width:100%; height:100%; object-fit:cover; }
+    .thumb button { position:absolute; top:4px; right:4px; width:28px; height:28px; border:0; border-radius:50%; background:rgba(0,0,0,.65); color:white; font-size:18px; }
+    .sectionTitle { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .sectionTitle h2 { margin:0; font-size:17px; }
+    .countBadge { padding:5px 9px; border-radius:999px; background:#f2f4f7; color:#344054; font-size:12px; font-weight:700; }
+    .titles { display:flex; flex-direction:column; gap:8px; }
+    .titleItem { display:grid; grid-template-columns:34px 1fr 40px; gap:8px; align-items:center; }
+    .num { color:var(--muted); font-size:12px; text-align:center; }
+    .titleItem input { width:100%; min-height:44px; border:1px solid var(--line); border-radius:10px; padding:9px 10px; font-size:16px; }
+    .remove { width:40px; height:40px; border:1px solid var(--line); background:#fff; border-radius:10px; color:var(--danger); font-size:18px; }
+    .empty { color:var(--muted); font-size:14px; text-align:center; padding:18px 8px; }
+    .manual { display:flex; gap:8px; margin-bottom:10px; }
+    .manual input { flex:1; min-width:0; min-height:46px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:16px; }
+    .manual button { width:70px; border:0; border-radius:12px; background:#344054; color:#fff; font-weight:700; }
+    details { margin-top:12px; }
+    summary { font-weight:700; cursor:pointer; }
+    ol { padding-left:22px; color:#344054; font-size:13px; line-height:1.7; }
+    .notice { color:#475467; font-size:12px; line-height:1.6; }
+    @media (min-width:600px) { .thumbs { grid-template-columns:repeat(5,1fr); } }
+  </style>
+</head>
+<body>
+<main class="app">
+  <h1>BUMP作品カウンター</h1>
+  <p class="lead">BUMPの作品一覧スクリーンショットからタイトル候補を読み取り、重複を除いて作品数を集計します。</p>
+
+  <section class="card">
+    <label class="upload" for="images">写真・スクリーンショットを選ぶ</label>
+    <input id="images" type="file" accept="image/*" multiple />
+    <p class="hint">同じ作品が複数画像に写っていても、タイトルが一致すれば1作品として集計します。鮮明な縦長スクリーンショット推奨です。</p>
+    <div id="thumbs" class="thumbs"></div>
+    <div class="grid">
+      <div class="metric"><b id="imageCount">0</b><span>画像</span></div>
+      <div class="metric"><b id="rawCount">0</b><span>抽出候補</span></div>
+      <div class="metric"><b id="uniqueCount">0</b><span>作品数</span></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="ocrBtn" class="btn primary" disabled>OCRで読み取る</button>
+      <button id="clearImagesBtn" class="btn" disabled>画像をクリア</button>
+    </div>
+    <div id="progressWrap" class="progressWrap">
+      <div class="progressTrack"><div id="progressBar" class="progressBar"></div></div>
+      <div id="status" class="status"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="sectionTitle"><h2>作品タイトル</h2><span id="countBadge" class="countBadge">0作品</span></div>
+    <div class="manual"><input id="manualTitle" placeholder="作品名を手動追加" /><button id="addBtn">追加</button></div>
+    <div id="titles" class="titles"><div class="empty">OCR結果または手入力した作品名が表示されます。</div></div>
+    <div class="row" style="margin-top:14px">
+      <button id="dedupeBtn" class="btn" disabled>重複を整理</button>
+      <button id="csvBtn" class="btn primary" disabled>CSVを保存</button>
+      <button id="clearTitlesBtn" class="btn danger" disabled>全削除</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>使い方と精度を上げるコツ</summary>
+      <ol>
+        <li>BUMPの作品一覧を少しずつスクロールして、画面ごとにスクリーンショットを撮ります。</li>
+        <li>すべての画像を選び、「OCRで読み取る」を押します。</li>
+        <li>誤認識したタイトルを直接修正し、不要な行は×で削除します。</li>
+        <li>「重複を整理」を押した後、CSVを保存します。</li>
+      </ol>
+      <p class="notice">画像処理は端末のブラウザ内で行います。初回のOCR実行時は日本語認識データの読み込みに通信が必要です。BUMPのAPIや通信内容にはアクセスしません。</p>
+    </details>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let files = [];
+let titles = [];
+let rawDetected = 0;
+const noisePatterns = [
+  /^\d+[話位件分秒年月日]+$/, /^(ホーム|ランキング|検索|マイページ|作品一覧|新着|おすすめ|急上昇|視聴中|無料|独占|注目|恋愛|ドラマ|すべて|続きを見る)$/,
+  /^(BUMP|App Store|Google Play)$/i, /^[\d\s:./%-]+$/, /^[ぁ-んァ-ヶ一-龠A-Za-z0-9]{1,2}$/
+];
+
+function normalize(s) {
+  return s.replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/[|｜]/g,'I').replace(/\s+/g,' ').replace(/^[\-—–・●◆■□▶▷>]+|[\-—–・●◆■□▶▷>]+$/g,'').trim();
+}
+function keyOf(s) { return normalize(s).toLowerCase().replace(/[\s　「」『』【】()（）\-ー・!！?？:：.,。]/g,''); }
+function isCandidate(line) {
+  const s = normalize(line);
+  if (!s || s.length < 3 || s.length > 45) return false;
+  if (noisePatterns.some(p => p.test(s))) return false;
+  const letters = (s.match(/[一-龠ぁ-んァ-ヶA-Za-z]/g) || []).length;
+  return letters >= 2;
+}
+function dedupe(items) {
+  const seen = new Map();
+  for (const item of items.map(normalize).filter(Boolean)) {
+    const k = keyOf(item);
+    if (k.length < 2) continue;
+    if (!seen.has(k) || item.length > seen.get(k).length) seen.set(k,item);
+  }
+  return [...seen.values()];
+}
+function updateMetrics() {
+  $('imageCount').textContent = files.length;
+  $('rawCount').textContent = rawDetected;
+  $('uniqueCount').textContent = dedupe(titles).length;
+  $('countBadge').textContent = `${dedupe(titles).length}作品`;
+  $('ocrBtn').disabled = files.length === 0;
+  $('clearImagesBtn').disabled = files.length === 0;
+  const none = titles.length === 0;
+  $('dedupeBtn').disabled = none;
+  $('csvBtn').disabled = none;
+  $('clearTitlesBtn').disabled = none;
+}
+function renderThumbs() {
+  const area = $('thumbs'); area.innerHTML='';
+  files.forEach((f,i) => {
+    const box=document.createElement('div'); box.className='thumb';
+    const img=document.createElement('img'); img.src=URL.createObjectURL(f); img.alt=f.name;
+    const b=document.createElement('button'); b.textContent='×'; b.onclick=()=>{files.splice(i,1); renderThumbs(); updateMetrics();};
+    box.append(img,b); area.append(box);
+  });
+}
+function renderTitles() {
+  const area=$('titles'); area.innerHTML='';
+  if (!titles.length) { area.innerHTML='<div class="empty">OCR結果または手入力した作品名が表示されます。</div>'; updateMetrics(); return; }
+  titles.forEach((title,i)=>{
+    const row=document.createElement('div'); row.className='titleItem';
+    const n=document.createElement('span'); n.className='num'; n.textContent=i+1;
+    const input=document.createElement('input'); input.value=title; input.setAttribute('aria-label',`作品名 ${i+1}`);
+    input.oninput=()=>{ titles[i]=input.value; updateMetrics(); };
+    const del=document.createElement('button'); del.className='remove'; del.textContent='×'; del.onclick=()=>{titles.splice(i,1); renderTitles();};
+    row.append(n,input,del); area.append(row);
+  });
+  updateMetrics();
+}
+$('images').addEventListener('change', e=>{
+  files.push(...[...e.target.files].filter(f=>f.type.startsWith('image/')));
+  e.target.value=''; renderThumbs(); updateMetrics();
+});
+$('clearImagesBtn').onclick=()=>{files=[]; renderThumbs(); updateMetrics();};
+$('addBtn').onclick=()=>{ const v=normalize($('manualTitle').value); if(v){titles.push(v); $('manualTitle').value=''; renderTitles();} };
+$('manualTitle').addEventListener('keydown',e=>{if(e.key==='Enter') $('addBtn').click();});
+$('dedupeBtn').onclick=()=>{titles=dedupe(titles); renderTitles();};
+$('clearTitlesBtn').onclick=()=>{titles=[]; rawDetected=0; renderTitles();};
+$('csvBtn').onclick=()=>{
+  const clean=dedupe(titles);
+  const rows=[['順位','作品タイトル'], ...clean.map((t,i)=>[i+1,t])];
+  const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`bump_titles_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+};
+$('ocrBtn').onclick=async()=>{
+  if (!files.length) return;
+  if (!window.Tesseract) { alert('OCRライブラリを読み込めませんでした。通信環境を確認してください。'); return; }
+  $('ocrBtn').disabled=true; $('progressWrap').style.display='block';
+  let found=[];
+  try {
+    for(let i=0;i<files.length;i++){
+      $('status').textContent=`${i+1}/${files.length}枚目を読み取り中…`;
+      const result=await Tesseract.recognize(files[i],'jpn+eng',{
+        logger:m=>{
+          if(m.status==='recognizing text'){
+            const total=((i + (m.progress||0))/files.length)*100;
+            $('progressBar').style.width=`${Math.round(total)}%`;
+          }
+        }
+      });
+      const lines=result.data.text.split(/\r?\n/).map(normalize).filter(isCandidate);
+      found.push(...lines);
+    }
+    rawDetected += found.length;
+    titles=dedupe([...titles,...found]);
+    renderTitles();
+    $('progressBar').style.width='100%';
+    $('status').textContent=`完了：${found.length}件の候補を抽出しました。内容を確認してください。`;
+  } catch(err) {
+    console.error(err); $('status').textContent='読み取りに失敗しました。画像枚数を減らすか、通信環境を確認してください。';
+  } finally { $('ocrBtn').disabled=files.length===0; }
+};
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+updateMetrics();
+</script>
+</body>
+</html>
